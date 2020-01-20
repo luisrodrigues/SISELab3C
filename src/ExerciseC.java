@@ -1,38 +1,32 @@
 import java.util.ArrayList;
 //producer consumer test
 public class ExerciseC {
-    private final static int MaxTasks = 10;
-    private final static int Limit = 1;
+    private final static int MaxTasks = 100;
+    private final static int Limit = 5;
 
     static class TaskList {
         private ArrayList<Integer> contents = new ArrayList<Integer>();
         private int pos = -1;
 
-        public int get() {
-            if (contents.isEmpty()) {
-                throw new RuntimeException("The event queue is empty!");
+        public synchronized int get() throws InterruptedException {
+            while (contents.isEmpty()) {
+                wait();
             }
             int value = contents.remove(pos);
             pos--;
+            notifyAll();
             return value;
         }
 
-        public void put(int value) {
-            if (contents.size() >= Limit) {
-                throw new RuntimeException("The event queue is full!");
+        public synchronized void put(int value) throws InterruptedException {
+            while (contents.size() >= Limit) {
+                wait();
             }
             contents.add(value);
             pos++;
+            notifyAll();
         }
     }
-    
-    
-    
-    
-    
-    
-    
-    
     
     static class Consumer extends Thread {
         private TaskList tasks;
@@ -45,7 +39,11 @@ public class ExerciseC {
         public void run() {
             int value = 0;
             for (int i = 0; i < MaxTasks; i++) {
-                value = tasks.get();
+                try {
+                    value = tasks.get();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 System.out.println("Consumer #" + this.number + " got: " + value);
             }
         }
@@ -61,11 +59,17 @@ public class ExerciseC {
         }
         public void run() {
             for (int i = 0; i < MaxTasks; i++) {
-                tasknumber.put(i);
+                try {
+                    tasknumber.put(i);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 System.out.println("Producer #" + this.number + " put: " + i);
                 try {
                     sleep((int)(Math.random() * 100));
-                } catch (InterruptedException e) { }
+                } catch (InterruptedException e) {
+
+                }
             }
         }
     }
@@ -73,11 +77,17 @@ public class ExerciseC {
     public static void main(String[] args) throws InterruptedException {
         TaskList c = new TaskList();
         Producer p1 = new Producer(c, 1);
+        Producer p2 = new Producer(c, 2);
         Consumer c1 = new Consumer(c, 1);
+        Consumer c2 = new Consumer(c, 2);
 
         p1.start();
+        p2.start();
         c1.start();
+        c2.start();
         p1.join();
         c1.join();
+        p2.join();
+        c2.join();
     }
 }
